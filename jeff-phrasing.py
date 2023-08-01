@@ -217,6 +217,27 @@ ENDERS = {
     "": ("present", ""),
     "D": ("past", ""),
 
+    # RGS - To update (overrides nothing)
+    "RGS": ("present", {None: " update", "3ps": " updates", "present-participle": " updating", "past-participle": " updated"}),
+    "RGZ": ("past", {None: " updated", "root": " update", "present-participle": " updating", "past-participle": " updated"}),
+
+    # RL - To recall
+    # "RL": ("present", {None: " recall", "3ps": " recalls", "present-participle": " recalling", "past-participle": " recalled"}),
+    # "RLD": ("past", {None: " recalled", "root": " recall", "present-participle": " recalling", "past-participle": " recalled"}),
+
+    # RL - To uped (overrides recall and recalled)
+    "RL": ("present", {None: " upgrade", "3ps": " upgrades", "present-participle": " upgrading", "past-participle": " upgraded"}),
+    "RLD": ("past", {None: " upgraded", "root": " upgrade", "present-participle": " upgrading", "past-participle": " upgraded"}),
+    
+    # # RBL - shall - Auxiliary verb
+    # # These do not combine naturally with middle/structures.
+    # "RBL": ("present", " shall"),
+    # "RBLD": ("past", " should"),
+
+    # RBL - to load (overwrites shall and should which are not needed)
+    "RBL": ("present", {None: " load", "3ps": " loads", "present-participle": " loading", "past-participle": " loaded"}),
+    "RBLD": ("past", {None: " loaded", "root": " load", "present-participle": " loading", "past-participle": " loaded"}),
+
     # RB: To ask
     "RB": ("present", {None: " ask", "3ps": " asks", "present-participle": " asking", "past-participle": " asked"}),
     "RBD": ("past", {None: " asked", "root": " ask", "present-participle": " asking", "past-participle": " asked"}),
@@ -440,10 +461,6 @@ ENDERS = {
     "RLG": ("present", " really"),
     "RLGD": ("past", " really"),
 
-    # RL - To recall
-    "RL": ("present", {None: " recall", "3ps": " recalls", "present-participle": " recalling", "past-participle": " recalled"}),
-    "RLD": ("past", {None: " recalled", "root": " recall", "present-participle": " recalling", "past-participle": " recalled"}),
-
     # RLS - To realize (that)
     "RLS": ("present", {None: " realize", "3ps": " realizes", "present-participle": " realizing", "past-participle": " realized"}),
     "RLTS": ("present", {None: " realize that", "3ps": " realizes that", "present-participle": " realizing that", "past-participle": " realized that"}),
@@ -483,11 +500,6 @@ ENDERS = {
     "PLTS": ("present", {None: " seem to", "3ps": " seems to", "present-participle": " seeming to", "past-participle": " seemed to"}),
     "PLSZ": ("past", {None: " seemed", "root": " seem", "present-participle": " seeming", "past-participle": " seemed"}),
     "PLTSDZ": ("past", {None: " seemed to", "root": " seem to", "present-participle": " seeming to", "past-participle": " seemed to"}),
-
-    # RBL - shall - Auxiliary verb
-    # These do not combine naturally with middle/structures.
-    "RBL": ("present", " shall"),
-    "RBLD": ("past", " should"),
 
     # RBZ - To show
     "RBZ": ("present", {None: " show", "3ps": " shows", "present-participle": " showing", "past-participle": " shown"}),
