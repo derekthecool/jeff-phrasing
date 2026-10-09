@@ -3,12 +3,43 @@
 # See README.md for instructions on how the system works.
 
 import re
+from time import monotonic as clock
 
 LONGEST_KEY = 1
 
 PARTS_MATCHER = re.compile(
     r'(S?T?K?P?W?H?R?)(A?O?)-?(\*?)(E?U?)(F?)(R?P?B?L?G?T?S?D?Z?)'
 )
+
+# Phrases are built with expanded negatives ("have not"). When
+# `contractions_enabled` is on, lookup() contracts them ("haven't").
+# Toggle it at runtime with CONTRACTION_TOGGLE_STROKE.
+CONTRACTION_TOGGLE_STROKE = "TRA*BGT"
+contractions_enabled = False
+TOGGLE_DEBOUNCE_SECONDS = 0.25
+last_toggle_time = float("-inf")
+
+IRREGULAR_CONTRACTIONS = {"cannot": "can't", "will not": "won't"}
+IRREGULAR_EXPANSIONS = {v: k for k, v in IRREGULAR_CONTRACTIONS.items()}
+AUXILIARIES = "do|does|did|could|should|would|is|are|were|was|have|has|had"
+REGULAR_CONTRACTION = re.compile(rf"\b({AUXILIARIES}) not\b")
+REGULAR_EXPANSION = re.compile(rf"\b({AUXILIARIES})n't\b")
+
+
+def replace_words(table, text):
+    pattern = "|".join(rf"\b{re.escape(word)}\b" for word in table)
+    return re.sub(pattern, lambda match: table[match.group()], text)
+
+
+def contract(text):
+    text = replace_words(IRREGULAR_CONTRACTIONS, text)
+    return REGULAR_CONTRACTION.sub(r"\1n't", text)
+
+
+def expand(text):
+    text = replace_words(IRREGULAR_EXPANSIONS, text)
+    return REGULAR_EXPANSION.sub(r"\1 not", text)
+
 
 TO_BE = {
     "present": {
@@ -129,13 +160,13 @@ SIMPLE_STRUCTURES = {
 MIDDLES = {
     # Map of stroke -> (map[tense][verb-form](string, verb-form)
     "": {"present": {None: (" do", "root"), "3ps": (" does", "root")}, "past": (" did", "root")},
-    "*": {"present": {None: (" don't", "root"), "3ps": (" doesn't", "root")}, "past": (" didn't", "root")},
+    "*": {"present": {None: (" do not", "root"), "3ps": (" does not", "root")}, "past": (" did not", "root")},
     "A": {"present": (" can", "root"), "past": (" could", "root")},
-    "A*": {"present": (" can't", "root"), "past": (" couldn't", "root")},
+    "A*": {"present": (" cannot", "root"), "past": (" could not", "root")},
     "O": {"present": (" shall", "root"), "past": (" should", "root")},
-    "O*": {"present": (" shall not", "root"), "past": (" shouldn't", "root")},
+    "O*": {"present": (" shall not", "root"), "past": (" should not", "root")},
     "AO": {"present": (" will", "root"), "past": (" would", "root")},
-    "AO*": {"present": (" won't", "root"), "past": (" wouldn't", "root")},
+    "AO*": {"present": (" will not", "root"), "past": (" would not", "root")},
 }
 
 # `!` represents the starter
@@ -147,11 +178,11 @@ STRUCTURE_EXCEPTIONS = {
 
     # To make reverse look-ups work correctly, longer results must be listed first
 
-    "*E": ({"present": {None: "! aren't", "1ps": "! am not", "3ps": "! isn't"}, "past": {None: "! weren't", "1ps": "! wasn't", "3ps": "! wasn't"}}, False, "present-participle"),
+    "*E": ({"present": {None: "! are not", "1ps": "! am not", "3ps": "! is not"}, "past": {None: "! were not", "1ps": "! was not", "3ps": "! was not"}}, False, "present-participle"),
     "E": ({"present": {None: "! are", "1ps": "! am", "3ps": "! is"}, "past": {None: "! were", "1ps": "! was", "3ps": "! was"}}, False, "present-participle"),
-    "*F": ({"present": {None: "! haven't", "3ps": "! hasn't"}, "past": "! hadn't"}, False, "past-participle"),
+    "*F": ({"present": {None: "! have not", "3ps": "! has not"}, "past": "! had not"}, False, "past-participle"),
     "F": ({"present": {None: "! have", "3ps": "! has"}, "past": "! had"}, False, "past-participle"),
-    "*EF": ({"present": {None: "! haven't been", "3ps": "! hasn't been"}, "past": "! hadn't been"}, False, "present-participle"),
+    "*EF": ({"present": {None: "! have not been", "3ps": "! has not been"}, "past": "! had not been"}, False, "present-participle"),
     "EF": ({"present": {None: "! have been", "3ps": "! has been"}, "past": "! had been"}, False, "present-participle"),
 
     # The following alternate definitions cause phrases to use contracted forms, e.g.:
@@ -160,6 +191,8 @@ STRUCTURE_EXCEPTIONS = {
     # * `I have gone to` -> `I've gone to`
     #
     # To use contracted forms, uncomment out the next 6 definitions.
+    # (Negative contractions such as `haven't` are handled separately by
+    # `contractions_enabled`, so these entries should stay expanded: `have not`.)
     #
     # "*E": ({"present": {None: "! are not", "1ps": "!'m not", "2p": "!'re not", "3ps": "! isn't", "1pp": "!'re not", "3pp": "!'re not", "b3pp": "! are not"}, "past": {None: "! weren't", "1ps": "! wasn't", "3ps": "! wasn't"}}, False, "present-participle"),
     # "E": ({"present": {None: "! are", "1ps": "!'m", "2p": "!'re", "3ps": "!'s", "b3ps": "! is", "1pp": "!'re", "3pp": "!'re", "b3pp": "! are"}, "past": {None: "! were", "1ps": "! was", "3ps": "! was"}}, False, "present-participle"),
@@ -555,7 +588,27 @@ ENDERS = {
 }
 
 
+def toggle_contractions():
+    # Plover (and plugins such as Tapey Tape that test `stroke in dictionary`)
+    # can call lookup() several times for a single stroke, milliseconds apart.
+    # Only the first call in a burst flips the setting.
+    global contractions_enabled, last_toggle_time
+    now = clock()
+    if now - last_toggle_time >= TOGGLE_DEBOUNCE_SECONDS:
+        contractions_enabled = not contractions_enabled
+    last_toggle_time = now
+
+
 def lookup(key):
+    if key[0] == CONTRACTION_TOGGLE_STROKE:
+        toggle_contractions()
+        return "{}"
+
+    phrase = build_phrase(key)
+    return contract(phrase) if contractions_enabled else phrase
+
+
+def build_phrase(key):
     starter_lookup, middle_lookup, structure_lookup, ender_lookup = determine_parts(key[0])
 
     starter, verb_form, _ = starter_lookup
@@ -580,7 +633,7 @@ def lookup(key):
     return middle_phrase + ending
 
 def determine_parts(stroke):
-    if stroke in NON_PHRASE_STROKES:
+    if stroke == CONTRACTION_TOGGLE_STROKE or stroke in NON_PHRASE_STROKES:
         raise KeyError
 
     match = PARTS_MATCHER.match(stroke)
@@ -741,7 +794,7 @@ def add_verb_stroke(prefix, suffix):
 
 def reverse_match(result, full_text, stroke):
     try:
-        if lookup([stroke]).strip() == full_text:
+        if build_phrase([stroke]).strip() == full_text:
             result.append((stroke,))
     except KeyError:
         pass
@@ -782,6 +835,7 @@ def reverse_middle_match(result, full_text, text, prefix, form):
 
 
 def reverse_lookup(text):
+    text = expand(text)
     if not POSSIBLE_REVERSE_MATCH.fullmatch(text):
         return []
 

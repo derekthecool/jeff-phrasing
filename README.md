@@ -411,6 +411,18 @@ Memorization hints:
 - `live`, `give` and `move` use `LZ`, `GZ` and `MZ`.
 - `let`, `get` and `put` use `LS`, `GS` and `PS`
 
+# Contractions
+
+Negative phrases are expanded by default: `SWR*F` produces `I have not`.
+
+Stroke `TRA*BGT` toggles contracted negatives (`I haven't`, `I can't`,
+`I won't`) on and off. Stroke it again to switch back. The setting lives in
+memory, so it resets to expanded when Plover restarts or the dictionary reloads.
+Change `CONTRACTION_TOGGLE_STROKE` in `jeff-phrasing.py` to use another stroke,
+or `contractions_enabled` to change the starting mode.
+
+Run the tests with `python -m unittest test_jeff_phrasing` from this directory.
+
 # Installation
 
 1. In plover, first install plover-python-dictionary
